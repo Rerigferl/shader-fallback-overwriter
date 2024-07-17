@@ -1,7 +1,9 @@
 {
-    "name": "vpm-package.runtime",
-    "references": [],
-    "includePlatforms": [],
+    "name": "numerira.liltoon-fallback-overwriter.editor",
+    "references": [ ],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
