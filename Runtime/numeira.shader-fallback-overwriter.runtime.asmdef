@@ -1,13 +1,8 @@
 {
-    "name": "numerira.shader-fallback-overwriter.editor",
+    "name": "numeira.shader-fallback-overwriter.runtime",
     "rootNamespace": "",
-    "references": [
-        "nadena.dev.ndmf",
-        "numerira.shader-fallback-overwriter.runtime"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
