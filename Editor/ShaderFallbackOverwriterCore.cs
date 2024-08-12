@@ -34,6 +34,9 @@ namespace Numeira
                     var materials = renderer.sharedMaterials;
                     foreach(ref var material in materials.AsSpan())
                     {
+                        if (material == null)
+                            continue;
+
                         if (!ObjectRegistry.GetReference(material).TryResolve(context.ErrorReport, out var original))
                         {
                             original = material;
