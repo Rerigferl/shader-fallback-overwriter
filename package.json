@@ -1,8 +1,14 @@
 {
-    "name": "numerira.liltoon-fallback-overwriter",
-    "version": "0.0.0",
-    "displayName": "",
-    "description": "",
-    "url": "https://github.com/Rerigferl/liltoon-fallback-overwriter",
-    "vpmDependencies": {}
+    "name": "numerira.shader-fallback-overwriter",
+    "version": "1.0.0-alpha.1",
+    "unity": "2022.3",
+    "author": {
+      "name": "Numeira"
+    },
+    "displayName": "Shader Fallback Overwriter",
+    "description": "An editor extension for easy modification of the shader fallback.",
+    "url": "https://github.com/Rerigferl/shader-fallback-overwriter",
+    "vpmDependencies": {
+        "nadena.dev.ndmf": "^1.4.1"
+    }
 }
