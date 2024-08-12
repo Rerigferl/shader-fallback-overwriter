@@ -151,16 +151,14 @@ namespace Numeira
             serializedObject.Update();
 
             EditorGUILayout.PropertyField(Inherit, EditorGUIUtility.TrTempContent("Fallback Overwrite Mode"));
-            EditorGUILayout.Space();
+
+            DrawSplitter();
 
             EditorGUI.BeginDisabledGroup((InheritMode)Inherit.enumValueIndex is InheritMode.Inherit or InheritMode.DontSet);
 
-            bool canEditRenderType = false;
-            bool canEditCullType = false;
-
             EditorGUILayout.PropertyField(ShaderType);
 
-            (canEditRenderType, canEditCullType) = (FallbackShaderType)ShaderType.enumValueIndex switch
+            var (canEditRenderType, canEditCullType) = (FallbackShaderType)ShaderType.enumValueIndex switch
             {
                 FallbackShaderType.Toon or FallbackShaderType.Unlit => (true, true),
                 _ => (false, false),
@@ -176,7 +174,7 @@ namespace Numeira
 
             EditorGUI.EndDisabledGroup();
 
-            EditorGUILayout.Space();
+            DrawSplitter();
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(ListMode, EditorGUIUtility.TrTempContent("Material List Mode"));
@@ -187,6 +185,19 @@ namespace Numeira
             EditorGUI.EndDisabledGroup();
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private static void DrawSplitter()
+        {
+            var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            float margin = 4f;
+
+            rect.x += margin;
+            rect.width -= margin;
+            rect.y += rect.height / 2;
+            rect.height = 1;
+
+            EditorGUI.DrawRect(rect, new Color(1, 1, 1, 0.1f));
         }
     }
 }
