@@ -1,5 +1,6 @@
 {
-    "name": "numerira.liltoon-fallback-overwriter.runtime",
+    "name": "numerira.shader-fallback-overwriter.runtime",
+    "rootNamespace": "",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

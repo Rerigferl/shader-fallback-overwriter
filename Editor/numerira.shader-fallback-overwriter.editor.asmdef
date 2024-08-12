@@ -1,6 +1,10 @@
 {
-    "name": "numerira.liltoon-fallback-overwriter.editor",
-    "references": [ ],
+    "name": "numerira.shader-fallback-overwriter.editor",
+    "rootNamespace": "",
+    "references": [
+        "nadena.dev.ndmf",
+        "numerira.shader-fallback-overwriter.runtime"
+    ],
     "includePlatforms": [
         "Editor"
     ],
