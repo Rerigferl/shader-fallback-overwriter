@@ -156,6 +156,8 @@ namespace Numeira
 
             DrawSplitter();
 
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Fallback Shader"), EditorStyles.boldLabel);
+
             EditorGUI.BeginDisabledGroup((InheritMode)Inherit.enumValueIndex is InheritMode.Inherit or InheritMode.DontSet);
 
             EditorGUILayout.PropertyField(ShaderType);
@@ -177,6 +179,8 @@ namespace Numeira
             EditorGUI.EndDisabledGroup();
 
             DrawSplitter();
+
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Material List"), EditorStyles.boldLabel);
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(ListMode, EditorGUIUtility.TrTempContent("Material List Mode"));
