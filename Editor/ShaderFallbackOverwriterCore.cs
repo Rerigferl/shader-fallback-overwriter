@@ -150,6 +150,8 @@ namespace Numeira
         {
             serializedObject.Update();
 
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Shader Fallback Settings"), EditorStyles.boldLabel);
+
             EditorGUILayout.PropertyField(Inherit, EditorGUIUtility.TrTempContent("Fallback Overwrite Mode"));
 
             DrawSplitter();
