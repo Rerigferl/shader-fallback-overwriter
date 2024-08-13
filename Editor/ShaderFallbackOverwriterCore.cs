@@ -64,9 +64,6 @@ namespace Numeira
                         material = cloned;
 
                         material.SetOverrideTag("VRCFallback", tag);
-
-                        AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out var guid, out long localId);
-                        Debug.LogError($"{material.name} {tag} {guid} {localId}");
                     }
                     renderer.sharedMaterials = materials;
                 }
