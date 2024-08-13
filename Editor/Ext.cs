@@ -42,6 +42,11 @@ namespace Numeira
 
     internal static class EnumExt<T>
     {
-        public static string[] Names = Enum.GetNames(typeof(T));
+        public static readonly string[] Names = Enum.GetNames(typeof(T));
+    }
+
+    internal static class ListExt<T>
+    {
+        public static readonly List<T> Shared = new();
     }
 }
