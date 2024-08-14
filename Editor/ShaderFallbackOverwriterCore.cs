@@ -194,9 +194,7 @@ namespace Numeira
             EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Shader Type Configuration"), EditorStyles.boldLabel);
             if (DrawPropertyWithFoldout(ShaderTypeProp, EditorGUIUtility.TrTempContent("Shader Type")))
             {
-                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(ShaderTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
-                EditorGUI.indentLevel--;
             }
 
             var (canEditRenderType, canEditCullType) = (ShaderType)ShaderTypeProp.enumValueIndex switch
@@ -212,9 +210,7 @@ namespace Numeira
 
             if (DrawPropertyWithFoldout(RenderTypeProp, EditorGUIUtility.TrTempContent("Rendering Mode")))
             {
-                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(RenderTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
-                EditorGUI.indentLevel--;
             }
 
             EditorGUI.EndDisabledGroup();
@@ -226,9 +222,7 @@ namespace Numeira
 
             if (DrawPropertyWithFoldout(CullTypeProp, EditorGUIUtility.TrTempContent("Facing")))
             {
-                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(CullTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
-                EditorGUI.indentLevel--;
             }
             EditorGUI.EndDisabledGroup();
 
