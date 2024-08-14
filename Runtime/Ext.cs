@@ -14,6 +14,7 @@ namespace Numeira
 
         public static Span<T> Skip<T>(this Span<T> span, int count) => span[Math.Min(span.Length - 1, count)..];
 
+        public static ReadOnlySpan<T> Skip<T>(this ReadOnlySpan<T> span, int count) => span[Math.Min(span.Length - 1, count)..];
 
         public static bool Find(this Span<ShaderFallbackSetting> span, InheritMode mode)
         {

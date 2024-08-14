@@ -125,52 +125,22 @@ namespace Numeira
             });
         }
 
-        private static string ResolveFallbackTag(GameObject obj, Material material)
+        public static string ResolveFallbackTag(GameObject obj, Material material = null)
         {
-            obj.GetComponentsInParent(true, ListExt<ShaderFallbackSetting>.Shared);
-            var components = ListExt<ShaderFallbackSetting>.Shared.AsSpan();
-            if (components.IsEmpty)
+            var settings = obj.GetComponentInParent<ShaderFallbackSetting>()?.GetSettings(material);
+            if (settings is not { } s)
                 return null;
-
-            for (int i = 0; i < components.Length; i++)
-            {
-                var component = components[i];
-
-                bool flag = component.ListMode switch
-                {
-                    MaterialListMode.Whitelist => component.Materials.AsSpan().Find(material),
-                    MaterialListMode.Blacklist => !component.Materials.AsSpan().Find(material),
-                    _ => true,
-                };
-
-                if (!flag)
-                    continue;
-
-                if (component.Inherit is InheritMode.DontSet)
-                    return null;
-
-                if (component.Inherit is InheritMode.Inherit)
-                    continue;
-
-                if (component.Inherit is InheritMode.Set)
-                    return GetFallbackTagString(component.ShaderType, component.RenderType, component.CullType);
-
-                if (component.Inherit is InheritMode.Coalesce)
-                    if (!components.Skip(i).Find(InheritMode.Set))
-                        return GetFallbackTagString(component.ShaderType, component.RenderType, component.CullType);
-            }
-
-            return null;
+            return GetFallbackTagString(s.Shader, s.Render, s.Cull);
         }
 
-        private static string GetFallbackTagString(FallbackShaderType shader, FallbackRenderType render = FallbackRenderType.Opaque, FallbackCullType cull = FallbackCullType.Default)
+        private static string GetFallbackTagString(ShaderType shader, RenderType render = RenderType.Opaque, CullType cull = CullType.Default)
         {
-            var (shaderStr, renderStr, cullStr) = (EnumExt<FallbackShaderType>.Names[(int)shader], "", "");
+            var (shaderStr, renderStr, cullStr) = (EnumExt<ShaderType>.Names[(int)shader], "", "");
 
-            if (shader is FallbackShaderType.Toon or FallbackShaderType.Unlit)
+            if (shader is ShaderType.Toon or ShaderType.Unlit)
             {
-                renderStr = render is not FallbackRenderType.Opaque ? EnumExt<FallbackRenderType>.Names[(int)render] : "";
-                cullStr = cull is FallbackCullType.DoubleSided ? "DoubleSided" : "";
+                renderStr = render is not RenderType.Opaque ? EnumExt<RenderType>.Names[(int)render] : "";
+                cullStr = cull is CullType.DoubleSided ? "DoubleSided" : "";
             }
 
             return string.Concat(shaderStr, renderStr, cullStr);
@@ -181,20 +151,30 @@ namespace Numeira
     public sealed class ShaderFallbackSettingEditor : Editor
     {
         private SerializedProperty Inherit;
-        private SerializedProperty ShaderType;
-        private SerializedProperty RenderType;
-        private SerializedProperty CullType;
+        private SerializedProperty ShaderTypeProp;
+        private SerializedProperty RenderTypeProp;
+        private SerializedProperty CullTypeProp;
         private SerializedProperty ListMode;
         private SerializedProperty Materials;
+        private SerializedProperty ShaderTypeMode;
+        private SerializedProperty RenderTypeMode;
+        private SerializedProperty CullTypeMode;
+
+        private GUIContent resultStringCache;
+        private readonly static GUIContent EmptyContent = new GUIContent(" ");
 
         public void OnEnable()
         {
             Inherit    = serializedObject.FindProperty(nameof(ShaderFallbackSetting.Inherit));
-            ShaderType = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ShaderType));
-            RenderType = serializedObject.FindProperty(nameof(ShaderFallbackSetting.RenderType));
-            CullType   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.CullType));
+            ShaderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ShaderType));
+            RenderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSetting.RenderType));
+            CullTypeProp   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.CullType));
             ListMode   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ListMode));
             Materials  = serializedObject.FindProperty(nameof(ShaderFallbackSetting.Materials));
+
+            ShaderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ShaderTypeMode));
+            RenderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSetting.RenderTypeMode));
+            CullTypeMode   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.CullTypeMode));
         }
 
         public override void OnInspectorGUI()
@@ -203,31 +183,67 @@ namespace Numeira
 
             EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Shader Fallback Settings"), EditorStyles.boldLabel);
 
+            EditorGUI.BeginChangeCheck();
+
             EditorGUILayout.PropertyField(Inherit, EditorGUIUtility.TrTempContent("Fallback Overwrite Mode"));
 
             DrawSplitter();
 
-            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Fallback Shader"), EditorStyles.boldLabel);
-
             EditorGUI.BeginDisabledGroup((InheritMode)Inherit.enumValueIndex is InheritMode.Inherit or InheritMode.DontSet);
 
-            EditorGUILayout.PropertyField(ShaderType);
-
-            var (canEditRenderType, canEditCullType) = (FallbackShaderType)ShaderType.enumValueIndex switch
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Shader Type Configuration"), EditorStyles.boldLabel);
+            if (DrawPropertyWithFoldout(ShaderTypeProp, EditorGUIUtility.TrTempContent("Shader Type")))
             {
-                FallbackShaderType.Toon or FallbackShaderType.Unlit => (true, true),
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(ShaderTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
+                EditorGUI.indentLevel--;
+            }
+
+            var (canEditRenderType, canEditCullType) = (ShaderType)ShaderTypeProp.enumValueIndex switch
+            {
+                ShaderType.Toon or ShaderType.Unlit => (true, true),
                 _ => (false, false),
             };
 
+            EditorGUILayout.Space();
+
             EditorGUI.BeginDisabledGroup(!canEditRenderType);
-            EditorGUILayout.PropertyField(RenderType, EditorGUIUtility.TrTempContent("Rendering Mode"));
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Rendering Mode Configuration"), EditorStyles.boldLabel);
+
+            if (DrawPropertyWithFoldout(RenderTypeProp, EditorGUIUtility.TrTempContent("Rendering Mode")))
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(RenderTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
+                EditorGUI.indentLevel--;
+            }
+
             EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space();
 
             EditorGUI.BeginDisabledGroup(!canEditCullType);
-            EditorGUILayout.PropertyField(CullType, EditorGUIUtility.TrTempContent("Facing"));
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Facing Configuration"), EditorStyles.boldLabel);
+
+            if (DrawPropertyWithFoldout(CullTypeProp, EditorGUIUtility.TrTempContent("Facing")))
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(CullTypeMode, EditorGUIUtility.TrTempContent("Configuration Mode"));
+                EditorGUI.indentLevel--;
+            }
             EditorGUI.EndDisabledGroup();
 
             EditorGUI.EndDisabledGroup();
+
+
+            if (resultStringCache == null || EditorGUI.EndChangeCheck())
+            {
+                serializedObject.ApplyModifiedProperties();
+                resultStringCache = new(ShaderFallbackOverwriterCore.ResolveFallbackTag((target as Component).gameObject) ?? "None" );
+            }
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField(EditorGUIUtility.TrTempContent("Result"), resultStringCache, EditorStyles.boldLabel);
 
             DrawSplitter();
 
@@ -242,6 +258,19 @@ namespace Numeira
             EditorGUI.EndDisabledGroup();
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private static bool DrawPropertyWithFoldout(SerializedProperty property, GUIContent label)
+        {
+            var rect = EditorGUILayout.GetControlRect();
+            EditorGUI.PropertyField(rect, property, EmptyContent);
+            bool expanded = property.isExpanded;
+            bool flag = EditorGUI.Foldout(rect, expanded, label, true);
+            if (expanded != flag)
+            {
+                property.isExpanded = flag;
+            }
+            return flag;
         }
 
         private static void DrawSplitter()
