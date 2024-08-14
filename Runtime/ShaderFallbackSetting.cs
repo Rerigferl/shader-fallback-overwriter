@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using UnityEngine;
 using VRC.SDKBase;
 
 namespace Numeira
@@ -8,14 +11,57 @@ namespace Numeira
     {
         public InheritMode Inherit;
 
-        public FallbackShaderType ShaderType = FallbackShaderType.Unlit;
-        public FallbackRenderType RenderType = FallbackRenderType.Opaque;
-        public FallbackCullType CullType = FallbackCullType.Default;
+        public SetOrCoalesce ShaderTypeMode = SetOrCoalesce.Set;
+        public ShaderType ShaderType = ShaderType.Unlit;
+
+        public SetOrCoalesce RenderTypeMode = SetOrCoalesce.Set;
+        public RenderType RenderType = RenderType.Opaque;
+
+        public SetOrCoalesce CullTypeMode = SetOrCoalesce.Set;
+        public CullType CullType = CullType.Default;
 
         public MaterialListMode ListMode = MaterialListMode.None;
         public Material[] Materials;
+
+        public (ShaderType Shader, RenderType Render, CullType Cull)? GetSettings(Material material = null)
+        {
+            bool flag = material == null || ListMode switch
+            {
+                MaterialListMode.Whitelist => Materials.AsSpan().Find(material),
+                MaterialListMode.Blacklist => !Materials.AsSpan().Find(material),
+                _ => true,
+            };
+
+            var parent = transform.parent?.GetComponentInParent<ShaderFallbackSetting>()?.GetSettings(material);
+
+            if (!flag || Inherit == InheritMode.Inherit || (Inherit == InheritMode.Coalesce && parent != null))
+                return parent;
+
+            if (Inherit == InheritMode.DontSet)
+                return null;
+
+            var settings = (ShaderType, RenderType, CullType);
+            if (parent is { } p)
+            {
+                if (ShaderTypeMode != SetOrCoalesce.Set)
+                    settings.ShaderType = p.Shader;
+
+                if (RenderTypeMode != SetOrCoalesce.Set)
+                    settings.RenderType = p.Render;
+
+                if (CullTypeMode != SetOrCoalesce.Set)
+                    settings.CullType = p.Cull;
+            }
+
+            return settings;
+        }
     }
 
+    public enum SetOrCoalesce
+    {
+        Set = 1,
+        Coalesce
+    }
 
     public enum InheritMode
     {
@@ -25,7 +71,7 @@ namespace Numeira
         DontSet
     }
 
-    public enum FallbackShaderType : uint
+    public enum ShaderType : uint
     {
         Hidden,
         Unlit,
@@ -38,7 +84,7 @@ namespace Numeira
         MobileToon,
     }
 
-    public enum FallbackRenderType : uint
+    public enum RenderType : uint
     {
         Opaque,
         Cutout,
@@ -46,7 +92,7 @@ namespace Numeira
         Fade,
     }
 
-    public enum FallbackCullType : uint
+    public enum CullType : uint
     {
         Default,
         DoubleSided
