@@ -6,8 +6,8 @@ using VRC.SDKBase;
 
 namespace Numeira
 {
-    [AddComponentMenu("NDMF/Shader Fallback Setting")]
-    public sealed class ShaderFallbackSetting : MonoBehaviour, IEditorOnly
+    [AddComponentMenu("NDMF/SFO Shader Fallback Settings")]
+    public sealed class ShaderFallbackSettings : MonoBehaviour, IEditorOnly
     {
         public InheritMode Inherit;
 
@@ -32,7 +32,7 @@ namespace Numeira
                 _ => true,
             };
 
-            var parent = transform.parent?.GetComponentInParent<ShaderFallbackSetting>()?.GetSettings(material);
+            var parent = transform.parent?.GetComponentInParent<ShaderFallbackSettings>()?.GetSettings(material);
 
             if (!flag || Inherit == InheritMode.Inherit || (Inherit == InheritMode.Coalesce && parent != null))
                 return parent;

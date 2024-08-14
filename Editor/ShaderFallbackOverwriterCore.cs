@@ -23,7 +23,7 @@ namespace Numeira
         {
             InPhase(BuildPhase.Transforming).BeforePlugin("nadena.dev.modular-avatar").Run("Shader Fallback Setting", context =>
             {
-                if (context.AvatarRootObject.GetComponentInChildren<ShaderFallbackSetting>() == null)
+                if (context.AvatarRootObject.GetComponentInChildren<ShaderFallbackSettings>() == null)
                     return;
 
                 Dictionary<(Material Mat, string Tag), Material> materialCache = new();
@@ -38,7 +38,7 @@ namespace Numeira
                         or VRCPhysBoneCollider
                         or VRCContactReceiver 
                         or VRCContactSender
-                        or ShaderFallbackSetting)
+                        or ShaderFallbackSettings)
                         continue;
 
                     var so = new SerializedObject(component);
@@ -117,8 +117,8 @@ namespace Numeira
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
 
-                context.AvatarRootObject.GetComponentsInChildren(true, ListExt<ShaderFallbackSetting>.Shared);
-                foreach(var component in ListExt<ShaderFallbackSetting>.Shared.AsSpan())
+                context.AvatarRootObject.GetComponentsInChildren(true, ListExt<ShaderFallbackSettings>.Shared);
+                foreach(var component in ListExt<ShaderFallbackSettings>.Shared.AsSpan())
                 {
                     Object.DestroyImmediate(component);
                 }
@@ -127,7 +127,7 @@ namespace Numeira
 
         public static string ResolveFallbackTag(GameObject obj, Material material = null)
         {
-            var settings = obj.GetComponentInParent<ShaderFallbackSetting>()?.GetSettings(material);
+            var settings = obj.GetComponentInParent<ShaderFallbackSettings>()?.GetSettings(material);
             if (settings is not { } s)
                 return null;
             return GetFallbackTagString(s.Shader, s.Render, s.Cull);
@@ -147,7 +147,7 @@ namespace Numeira
         }
     }
 
-    [CustomEditor(typeof(ShaderFallbackSetting))]
+    [CustomEditor(typeof(ShaderFallbackSettings))]
     public sealed class ShaderFallbackSettingEditor : Editor
     {
         private SerializedProperty Inherit;
@@ -165,16 +165,16 @@ namespace Numeira
 
         public void OnEnable()
         {
-            Inherit    = serializedObject.FindProperty(nameof(ShaderFallbackSetting.Inherit));
-            ShaderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ShaderType));
-            RenderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSetting.RenderType));
-            CullTypeProp   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.CullType));
-            ListMode   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ListMode));
-            Materials  = serializedObject.FindProperty(nameof(ShaderFallbackSetting.Materials));
+            Inherit    = serializedObject.FindProperty(nameof(ShaderFallbackSettings.Inherit));
+            ShaderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSettings.ShaderType));
+            RenderTypeProp = serializedObject.FindProperty(nameof(ShaderFallbackSettings.RenderType));
+            CullTypeProp   = serializedObject.FindProperty(nameof(ShaderFallbackSettings.CullType));
+            ListMode   = serializedObject.FindProperty(nameof(ShaderFallbackSettings.ListMode));
+            Materials  = serializedObject.FindProperty(nameof(ShaderFallbackSettings.Materials));
 
-            ShaderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSetting.ShaderTypeMode));
-            RenderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSetting.RenderTypeMode));
-            CullTypeMode   = serializedObject.FindProperty(nameof(ShaderFallbackSetting.CullTypeMode));
+            ShaderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSettings.ShaderTypeMode));
+            RenderTypeMode = serializedObject.FindProperty(nameof(ShaderFallbackSettings.RenderTypeMode));
+            CullTypeMode   = serializedObject.FindProperty(nameof(ShaderFallbackSettings.CullTypeMode));
         }
 
         public override void OnInspectorGUI()
