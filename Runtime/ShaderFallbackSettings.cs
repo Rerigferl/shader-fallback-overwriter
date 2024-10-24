@@ -20,7 +20,7 @@ namespace Numeira
         public SetOrCoalesce CullTypeMode = SetOrCoalesce.Set;
         public CullType CullType = CullType.Default;
 
-        public MaterialListMode ListMode = MaterialListMode.None;
+        public MaterialListMode ListMode = MaterialListMode.Blacklist;
         public Material[] Materials;
 
         public (ShaderType Shader, RenderType Render, CullType Cull)? GetSettings(Material material = null)
@@ -28,8 +28,7 @@ namespace Numeira
             bool flag = material == null || ListMode switch
             {
                 MaterialListMode.Whitelist => Materials.AsSpan().Find(material),
-                MaterialListMode.Blacklist => !Materials.AsSpan().Find(material),
-                _ => true,
+                _ => !Materials.AsSpan().Find(material),
             };
 
             var parent = transform.parent?.GetComponentInParent<ShaderFallbackSettings>()?.GetSettings(material);
@@ -100,8 +99,7 @@ namespace Numeira
 
     public enum MaterialListMode
     {
-        None,
-        Whitelist,
         Blacklist,
+        Whitelist,
     }
 }

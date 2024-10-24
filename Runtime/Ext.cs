@@ -30,13 +30,17 @@ namespace Numeira
             return false;
         }
 
-        public static bool Find<T>(this Span<T> span, T material) where T : UnityEngine.Object
+        public static bool Find<T>(this Span<T> span, T obj) where T : UnityEngine.Object
         {
+            if (span.IsEmpty)
+                return false;
+
             foreach(var x in span)
             {
-                if (material == x)
+                if (obj == x)
                     return true;
             }
+
             return false;
         }
     }
