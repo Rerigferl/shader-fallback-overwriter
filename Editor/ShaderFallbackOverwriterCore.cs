@@ -19,110 +19,172 @@ namespace Numeira
         public override string DisplayName => "Shader Fallback Overwriter";
         public override string QualifiedName => "numeira.shader-fallback-overwriter";
 
+        private sealed class State
+        {
+            public static State New(BuildContext context) => new();
+
+            public Dictionary<Material, Material> ClonedMaterials { get; } = new();
+        }
+
         protected override void Configure()
         {
-            InPhase(BuildPhase.Transforming).BeforePlugin("nadena.dev.modular-avatar").Run("Shader Fallback Setting", context =>
+            InPhase(BuildPhase.Transforming).BeforePlugin("nadena.dev.modular-avatar")
+                .Run("Bake AlphaMask", RunBakeAlphaMask).Then
+                .Run("Shader Fallback Setting", RunShaderFallbackSettings);
+        }
+
+        private void RunBakeAlphaMask(BuildContext context)
+        {
+            if (context.AvatarRootObject.GetComponentInChildren<AlphaMaskBaker>() == null)
+                return;
+
+            var state = context.GetState(State.New);
+
+            var components = ListExt<AlphaMaskBaker>.Shared;
+            context.AvatarRootObject.GetComponentsInChildren(components);
+
+            Dictionary<Object, Object> cache = new();
+
+            foreach (var component in components.AsSpan())
             {
-                if (context.AvatarRootObject.GetComponentInChildren<ShaderFallbackSettings>() == null)
-                    return;
-
-                Dictionary<(Material Mat, string Tag), Material> materialCache = new();
-
-                context.AvatarRootObject.GetComponentsInChildren(true, ListExt<Component>.Shared);
-                foreach (var component in ListExt<Component>.Shared.AsSpan())
+                var renderer = component.GetComponent<Renderer>();
+                var materials = renderer.sharedMaterials;
+                foreach (ref var material in materials.AsSpan())
                 {
-                    if (component is 
-                        (not (MonoBehaviour or Renderer)) 
-                        or VRCAvatarDescriptor 
-                        or VRCPhysBone 
-                        or VRCPhysBoneCollider
-                        or VRCContactReceiver 
-                        or VRCContactSender
-                        or ShaderFallbackSettings)
+                    if (component.MaterialListMode switch
+                    {
+                        MaterialListMode.Blacklist => materials.AsSpan().Find(material),
+                        MaterialListMode.Whitelist => !materials.AsSpan().Find(material),
+                        _ => false,
+                    })
                         continue;
 
-                    var so = new SerializedObject(component);
-
-                    bool enterChildren = true;
-                    var p = so.GetIterator();
-                    while (p.Next(enterChildren))
+                    if (cache.TryGetValue(material, out var obj) && obj is Material cloned)
                     {
-                        try
+                        material = cloned;
+                        continue;
+                    }
+
+                    cloned = Object.Instantiate(material);
+
+                    AssetDatabase.AddObjectToAsset(cloned, context.AssetContainer);
+                    cloned.name = $"{material.name}(AlphaMask Baked)";
+                    ObjectRegistry.RegisterReplacedObject(material, cloned);
+                    cache.Add(material, cloned);
+
+                }
+                renderer.sharedMaterials = materials;
+            }
+
+            foreach (var component in components.AsSpan())
+            {
+                Object.DestroyImmediate(component);
+            }
+        }
+
+        private void RunShaderFallbackSettings(BuildContext context)
+        {
+            if (context.AvatarRootObject.GetComponentInChildren<ShaderFallbackSettings>() == null)
+                return;
+
+            var state = context.GetState(State.New);
+
+            Dictionary<(Material Mat, string Tag), Material> materialCache = new();
+
+            context.AvatarRootObject.GetComponentsInChildren(true, ListExt<Component>.Shared);
+            foreach (var component in ListExt<Component>.Shared.AsSpan())
+            {
+                if (component is
+                    (not (MonoBehaviour or Renderer))
+                    or VRCAvatarDescriptor
+                    or VRCPhysBone
+                    or VRCPhysBoneCollider
+                    or VRCContactReceiver
+                    or VRCContactSender
+                    or ShaderFallbackSettings)
+                    continue;
+
+                var so = new SerializedObject(component);
+
+                bool enterChildren = true;
+                var p = so.GetIterator();
+                while (p.Next(enterChildren))
+                {
+                    try
+                    {
+                        if (p.propertyType == SerializedPropertyType.ObjectReference)
                         {
-                            if (p.propertyType == SerializedPropertyType.ObjectReference)
+                            var obj = p.objectReferenceValue;
+                            if (obj == null || obj is not Material material) continue;
+
+                            if (!ObjectRegistry.GetReference(material).TryResolve(context.ErrorReport, out var original))
+                                original = material;
+
+                            var tag = ResolveFallbackTag(component.gameObject, original as Material);
+                            if (tag == null)
+                                continue;
+
+                            var currentTag = material.GetTag("VRCFallback", true, null);
+                            if (currentTag == tag)
+                                continue;
+
+                            if (materialCache.TryGetValue((material, tag), out var cloned))
                             {
-                                var obj = p.objectReferenceValue;
-                                if (obj == null || obj is not Material material) continue;
-
-                                if (!ObjectRegistry.GetReference(material).TryResolve(context.ErrorReport, out var original))
-                                    original = material;
-
-                                var tag = ResolveFallbackTag(component.gameObject, original as Material);
-                                if (tag == null)
-                                    continue;
-
-                                var currentTag = material.GetTag("VRCFallback", true, null);
-                                if (currentTag == tag)
-                                    continue;
-
-                                if (materialCache.TryGetValue((material, tag), out var cloned))
-                                {
-                                    p.objectReferenceValue = cloned;
-                                    continue;
-                                }
-
-                                cloned = Object.Instantiate(material);
-
-                                AssetDatabase.AddObjectToAsset(cloned, context.AssetContainer);
-                                cloned.name = $"{material.name}({tag})";
-                                ObjectRegistry.RegisterReplacedObject(material, cloned);
-                                materialCache.Add((material, tag), cloned);
-                                cloned.SetOverrideTag("VRCFallback", tag);
-
                                 p.objectReferenceValue = cloned;
+                                continue;
                             }
-                        }
-                        finally
-                        {
-                            enterChildren = p.propertyType switch
-                            {
-                                SerializedPropertyType.String or
-                                SerializedPropertyType.Integer or
-                                SerializedPropertyType.Boolean or
-                                SerializedPropertyType.Float or
-                                SerializedPropertyType.Color or
-                                SerializedPropertyType.ObjectReference or
-                                SerializedPropertyType.LayerMask or
-                                SerializedPropertyType.Enum or
-                                SerializedPropertyType.Vector2 or
-                                SerializedPropertyType.Vector3 or
-                                SerializedPropertyType.Vector4 or
-                                SerializedPropertyType.Rect or
-                                SerializedPropertyType.ArraySize or
-                                SerializedPropertyType.Character or
-                                SerializedPropertyType.AnimationCurve or
-                                SerializedPropertyType.Bounds or
-                                SerializedPropertyType.Gradient or
-                                SerializedPropertyType.Quaternion or
-                                SerializedPropertyType.FixedBufferSize or
-                                SerializedPropertyType.Vector2Int or
-                                SerializedPropertyType.Vector3Int or
-                                SerializedPropertyType.RectInt or
-                                SerializedPropertyType.BoundsInt
-                                    => false,
-                                _ => true,
-                            };
+
+                            cloned = Object.Instantiate(material);
+
+                            AssetDatabase.AddObjectToAsset(cloned, context.AssetContainer);
+                            cloned.name = $"{material.name}({tag})";
+                            ObjectRegistry.RegisterReplacedObject(material, cloned);
+                            materialCache.Add((material, tag), cloned);
+                            cloned.SetOverrideTag("VRCFallback", tag);
+
+                            p.objectReferenceValue = cloned;
                         }
                     }
-                    so.ApplyModifiedPropertiesWithoutUndo();
+                    finally
+                    {
+                        enterChildren = p.propertyType switch
+                        {
+                            SerializedPropertyType.String or
+                            SerializedPropertyType.Integer or
+                            SerializedPropertyType.Boolean or
+                            SerializedPropertyType.Float or
+                            SerializedPropertyType.Color or
+                            SerializedPropertyType.ObjectReference or
+                            SerializedPropertyType.LayerMask or
+                            SerializedPropertyType.Enum or
+                            SerializedPropertyType.Vector2 or
+                            SerializedPropertyType.Vector3 or
+                            SerializedPropertyType.Vector4 or
+                            SerializedPropertyType.Rect or
+                            SerializedPropertyType.ArraySize or
+                            SerializedPropertyType.Character or
+                            SerializedPropertyType.AnimationCurve or
+                            SerializedPropertyType.Bounds or
+                            SerializedPropertyType.Gradient or
+                            SerializedPropertyType.Quaternion or
+                            SerializedPropertyType.FixedBufferSize or
+                            SerializedPropertyType.Vector2Int or
+                            SerializedPropertyType.Vector3Int or
+                            SerializedPropertyType.RectInt or
+                            SerializedPropertyType.BoundsInt
+                                => false,
+                            _ => true,
+                        };
+                    }
                 }
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
 
-                context.AvatarRootObject.GetComponentsInChildren(true, ListExt<ShaderFallbackSettings>.Shared);
-                foreach(var component in ListExt<ShaderFallbackSettings>.Shared.AsSpan())
-                {
-                    Object.DestroyImmediate(component);
-                }
-            });
+            context.AvatarRootObject.GetComponentsInChildren(true, ListExt<ShaderFallbackSettings>.Shared);
+            foreach (var component in ListExt<ShaderFallbackSettings>.Shared.AsSpan())
+            {
+                Object.DestroyImmediate(component);
+            }
         }
 
         public static string ResolveFallbackTag(GameObject obj, Material material = null)
